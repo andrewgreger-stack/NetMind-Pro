@@ -1,13 +1,1 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-/* This makes all text use a clean, modern font */
-html {
-  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-}
-
-/* This sets the background color and default text color to match the design */
-body {
-  background-color: rgb(248, 250, 252); /* slate-50 */
-  color: rgb(15, 23, 42); /* slate-900 */
-}
+@import "tailwindcss";
