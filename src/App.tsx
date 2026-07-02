@@ -3,9 +3,9 @@ import {
     Activity, Crosshair, Map, BarChart3, Trash2, Shield, PlusCircle, 
     MousePointer2, PlayCircle, Info, X, Download, Calendar, Users, FolderOpen, Loader2
 } from 'lucide-react';
-import { initializeApp } from 'firebase/app';
-import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, collection, doc, setDoc, updateDoc, onSnapshot, deleteDoc } from 'firebase/firestore';
+//import { initializeApp } from 'firebase/app';
+//import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
+//import { getFirestore, collection, doc, setDoc, updateDoc, onSnapshot, deleteDoc } from 'firebase/firestore';
 
 // --- FIREBASE SETUP ---
 //const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
