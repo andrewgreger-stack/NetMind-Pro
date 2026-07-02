@@ -17,6 +17,11 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+const appId = "netmind-pro-app";
+
 // --- MOCK DATA GENERATOR ---
 const generateMockData = () => {
     const types = ['Wrist', 'Snap', 'Slap', 'Backhand', 'Deflection'];
