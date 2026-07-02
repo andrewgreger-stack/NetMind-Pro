@@ -1,8 +1,18 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { 
     Activity, Crosshair, Map, BarChart3, Trash2, Shield, PlusCircle, 
-    MousePointer2, PlayCircle, Info, X, Download, Calendar, Users, FolderOpen
+    MousePointer2, PlayCircle, Info, X, Download, Calendar, Users, FolderOpen, Loader2
 } from 'lucide-react';
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
+import { getFirestore, collection, doc, setDoc, updateDoc, onSnapshot, deleteDoc } from 'firebase/firestore';
+
+// --- FIREBASE SETUP ---
+const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
 // --- MOCK DATA GENERATOR ---
 const generateMockData = () => {
@@ -42,6 +52,8 @@ const generateMockData = () => {
 };
 
 export default function NetMindApp() {
+    const [user, setUser] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('season');
     const [games, setGames] = useState([]);
     const [activeGameId, setActiveGameId] = useState(null);
@@ -67,6 +79,46 @@ export default function NetMindApp() {
         period: '1st'
     });
 
+    // --- FIREBASE AUTH & SYNC ---
+    useEffect(() => {
+        const initAuth = async () => {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (err) {
+                console.error("Authentication failed:", err);
+            }
+        };
+        initAuth();
+        const unsubscribe = onAuthStateChanged(auth, setUser);
+        return () => unsubscribe();
+    }, []);
+
+    useEffect(() => {
+        if (!user) return;
+        
+        const gamesRef = collection(db, 'artifacts', appId, 'users', user.uid, 'games');
+        const unsubscribe = onSnapshot(gamesRef, (snapshot) => {
+            const loadedGames = [];
+            snapshot.forEach((doc) => {
+                loadedGames.push({ id: doc.id, ...doc.data() });
+            });
+            // Sort by most recent game date
+            loadedGames.sort((a, b) => new Date(b.date) - new Date(a.date));
+            setGames(loadedGames);
+            setIsLoading(false);
+        }, (error) => {
+            console.error("Error fetching games:", error);
+            setIsLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, [user]);
+
+
     const activeGame = games.find(g => g.id === activeGameId);
     const activeShots = activeGame ? activeGame.shots : [];
 
@@ -79,8 +131,8 @@ export default function NetMindApp() {
         setIsModalOpen(true); // Open the pop-up modal
     };
 
-    const submitShot = () => {
-        if (currentShot.x === null || currentShot.netZone === null) {
+    const submitShot = async () => {
+        if (currentShot.x === null || currentShot.netZone === null || !user || !activeGame) {
             alert("Please select a target on the net.");
             return;
         }
@@ -91,21 +143,24 @@ export default function NetMindApp() {
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         };
 
-        setGames(prev => prev.map(g => 
-            g.id === activeGameId 
-                ? { ...g, shots: [newShot, ...g.shots] }
-                : g
-        ));
-        
-        // Reset specific form fields while keeping context
-        setCurrentShot(prev => ({
-            ...prev,
-            x: null,
-            y: null,
-            netZone: null,
-            result: 'Save'
-        }));
-        setIsModalOpen(false);
+        const updatedShots = [newShot, ...activeShots];
+        const gameRef = doc(db, 'artifacts', appId, 'users', user.uid, 'games', activeGameId);
+
+        try {
+            await updateDoc(gameRef, { shots: updatedShots });
+            
+            // Reset specific form fields while keeping context
+            setCurrentShot(prev => ({
+                ...prev,
+                x: null,
+                y: null,
+                netZone: null,
+                result: 'Save'
+            }));
+            setIsModalOpen(false);
+        } catch (error) {
+            console.error("Error saving shot:", error);
+        }
     };
 
     const closeModal = () => {
@@ -113,37 +168,65 @@ export default function NetMindApp() {
         setCurrentShot(prev => ({ ...prev, x: null, y: null, netZone: null })); // Reset the shot location if cancelled
     };
 
-    const deleteShot = (shotId) => {
-        setGames(prev => prev.map(g => 
-            g.id === activeGameId 
-                ? { ...g, shots: g.shots.filter(s => s.id !== shotId) }
-                : g
-        ));
+    const deleteShot = async (shotId) => {
+        if (!user || !activeGame) return;
+        const targetGame = games.find(g => g.id === activeGameId);
+        if (!targetGame) return;
+
+        const updatedShots = targetGame.shots.filter(s => s.id !== shotId);
+        const gameRef = doc(db, 'artifacts', appId, 'users', user.uid, 'games', activeGameId);
+        
+        try {
+            await updateDoc(gameRef, { shots: updatedShots });
+        } catch (error) {
+            console.error("Error deleting shot:", error);
+        }
     };
 
-    const loadMockData = () => {
+    const loadMockData = async () => {
+        if (!user) return;
+        setIsLoading(true);
         const mockGames = generateMockData();
-        setGames(mockGames);
-        setActiveGameId(mockGames[0].id);
-        setActiveTab('analytics');
+        
+        try {
+            // Save mock games to the cloud database
+            for (const game of mockGames) {
+                const { id, ...gameData } = game;
+                const gameRef = doc(db, 'artifacts', appId, 'users', user.uid, 'games', id);
+                await setDoc(gameRef, gameData);
+            }
+            setActiveGameId(mockGames[0].id);
+            setActiveTab('analytics');
+        } catch (error) {
+            console.error("Error saving mock data:", error);
+            setIsLoading(false);
+        }
     };
 
-    const createNewGame = (e) => {
+    const createNewGame = async (e) => {
         e.preventDefault();
-        if (!newGameForm.opponent) return;
-        const newGame = {
-            id: `game_${Date.now()}`,
+        if (!newGameForm.opponent || !user) return;
+        
+        const newGameId = `game_${Date.now()}`;
+        const newGameData = {
             date: newGameForm.date,
             opponent: newGameForm.opponent,
             locationType: newGameForm.locationType,
             gameType: newGameForm.gameType,
             shots: []
         };
-        setGames(prev => [newGame, ...prev]);
-        setActiveGameId(newGame.id);
-        setAnalyticsFilter(newGame.id);
-        setNewGameForm({ opponent: '', date: new Date().toISOString().split('T')[0], locationType: 'Home', gameType: 'League' });
-        setActiveTab('log');
+        
+        try {
+            const gameRef = doc(db, 'artifacts', appId, 'users', user.uid, 'games', newGameId);
+            await setDoc(gameRef, newGameData);
+            
+            setActiveGameId(newGameId);
+            setAnalyticsFilter(newGameId);
+            setNewGameForm({ opponent: '', date: new Date().toISOString().split('T')[0], locationType: 'Home', gameType: 'League' });
+            setActiveTab('log');
+        } catch (error) {
+            console.error("Error creating game:", error);
+        }
     };
 
     const exportToCSV = () => {
@@ -340,6 +423,16 @@ export default function NetMindApp() {
             </div>
         );
     };
+
+    if (isLoading) {
+        return (
+            <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center text-blue-600">
+                <Loader2 className="animate-spin mb-4" size={48} />
+                <h2 className="text-xl font-bold">Loading NetMind...</h2>
+                <p className="text-slate-500 text-sm mt-2">Syncing your season data</p>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-20 md:pb-8">
