@@ -41,7 +41,7 @@ const generateMockData = () => {
     return mockGames;
 };
 
-export default function NetMindApp() {
+export default function App() {
     const [activeTab, setActiveTab] = useState('season');
     const [games, setGames] = useState([]);
     const [activeGameId, setActiveGameId] = useState(null);
