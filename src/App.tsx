@@ -1,4 +1,3 @@
-import { auth } from './firebase';
 import React, { useState, useMemo, useEffect } from 'react';
 import { 
     Activity, Crosshair, Map, BarChart3, Trash2, Shield, PlusCircle, 
