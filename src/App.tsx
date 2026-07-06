@@ -9,19 +9,11 @@ import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged }
 import { getFirestore, collection, doc, setDoc, updateDoc, onSnapshot, deleteDoc } from 'firebase/firestore';
 
 // --- FIREBASE SETUP ---
-const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID
-};
-
+const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
 const auth = getAuth(app);
-const appId = "netmind-pro-app";
+const db = getFirestore(app);
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
 // --- MOCK DATA GENERATOR ---
 const generateMockData = () => {
@@ -89,39 +81,25 @@ export default function NetMindApp() {
     });
 
     // --- FIREBASE AUTH & SYNC ---
-   useEffect(() => {
-    const initAuth = async () => {
-        try {
-            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                await signInWithCustomToken(auth, __initial_auth_token);
-            } else {
-                             setIsLoading(false); 
+    useEffect(() => {
+        const initAuth = async () => {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (err) {
+                console.error("Authentication failed:", err);
             }
-        } catch (err) {
-            console.error("Authentication failed:", err);
-            setIsLoading(false);
-        }
-    };
-    
-    initAuth();
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-        setUser(currentUser);
-               if (currentUser) {
-            setIsLoading(false);
-        }
-    });
-    return () => unsubscribe();
-}, []);
+        };
+        initAuth();
+        const unsubscribe = onAuthStateChanged(auth, setUser);
+        return () => unsubscribe();
+    }, []);
 
-   useEffect(() => {
-        
-        if (!user) {
-            setGames([]); 
-            setIsLoading(false);
-            return;
-        }
-        
-        setIsLoading(true);
+    useEffect(() => {
+        if (!user) return;
         
         const gamesRef = collection(db, 'artifacts', appId, 'users', user.uid, 'games');
         const unsubscribe = onSnapshot(gamesRef, (snapshot) => {
