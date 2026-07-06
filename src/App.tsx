@@ -89,25 +89,39 @@ export default function NetMindApp() {
     });
 
     // --- FIREBASE AUTH & SYNC ---
-    useEffect(() => {
-        const initAuth = async () => {
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-            } catch (err) {
-                console.error("Authentication failed:", err);
+   useEffect(() => {
+    const initAuth = async () => {
+        try {
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+                             setIsLoading(false); 
             }
-        };
-        initAuth();
-        const unsubscribe = onAuthStateChanged(auth, setUser);
-        return () => unsubscribe();
-    }, []);
+        } catch (err) {
+            console.error("Authentication failed:", err);
+            setIsLoading(false);
+        }
+    };
+    
+    initAuth();
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+        setUser(currentUser);
+               if (currentUser) {
+            setIsLoading(false);
+        }
+    });
+    return () => unsubscribe();
+}, []);
 
-    useEffect(() => {
-        if (!user) return;
+   useEffect(() => {
+        
+        if (!user) {
+            setGames([]); 
+            setIsLoading(false);
+            return;
+        }
+        
+        setIsLoading(true);
         
         const gamesRef = collection(db, 'artifacts', appId, 'users', user.uid, 'games');
         const unsubscribe = onSnapshot(gamesRef, (snapshot) => {
