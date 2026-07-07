@@ -1,3 +1,4 @@
+import './firebase';
 import { auth } from "./firebase"; 
 import { signInWithEmailAndPassword } from "firebase/auth";
 import React, { useState, useMemo, useEffect } from 'react';
