@@ -80,17 +80,29 @@ export default function NetMindApp() {
     useEffect(() => {
         const initAuth = async () => {
             try {
+                // If a secure token is passed, log them in automatically
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                     await signInWithCustomToken(auth, __initial_auth_token);
                 } else {
-                    await signInAnonymously(auth);
+                    // STOP ANONYMOUS ACCESS: If there is no active user session, drop the loading screen so they see the login forms
+                    setIsLoading(false);
                 }
             } catch (err) {
                 console.error("Authentication failed:", err);
+                setIsLoading(false);
             }
         };
         initAuth();
-        const unsubscribe = onAuthStateChanged(auth, setUser);
+        
+        // Listen for when a user successfully logs in or logs out
+        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+            setUser(currentUser);
+            if (currentUser) {
+                setIsLoading(true); // Re-trigger loading state to pull their private data
+            } else {
+                setIsLoading(false); // Drop loading state if they log out to display the login screens
+            }
+        });
         return () => unsubscribe();
     }, []);
 
@@ -430,7 +442,21 @@ export default function NetMindApp() {
             </div>
         );
     }
+// FORCE LOGIN: If no user is authenticated, intercept and show the login form
+if (!user) {
+    return (
+        <LoginForm auth={auth} /> 
+        // Note: Change "<LoginForm />" to match whatever your actual 
+        // login interface component name is in your code layout!
+    );
+}
 
+// Otherwise, render the main protected dashboard app down here
+return (
+    <div className="netmind-dashboard">
+        {/* Your seasonal tracking app views */}
+    </div>
+);
     return (
         <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-20 md:pb-8">
             {/* Header */}
