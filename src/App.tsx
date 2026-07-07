@@ -1,20 +1,14 @@
 import './firebase';
-import { auth } from "./firebase"; 
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth, db } from "./firebase"; // <-- Clean import of our working auth and db
+import { signInWithEmailAndPassword, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "firebase/auth";
 import React, { useState, useMemo, useEffect } from 'react';
 import { 
     Activity, Crosshair, Map, BarChart3, Trash2, Shield, PlusCircle, 
     MousePointer2, PlayCircle, Info, X, Download, Calendar, Users, FolderOpen, Loader2
 } from 'lucide-react';
-import { initializeApp } from 'firebase/app';
-import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, collection, doc, setDoc, updateDoc, onSnapshot, deleteDoc } from 'firebase/firestore';
+import { collection, doc, setDoc, updateDoc, onSnapshot, deleteDoc } from 'firebase/firestore';
 
-// --- FIREBASE SETUP ---
-const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+// --- CONFIG SETUP ---
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
 // --- MOCK DATA GENERATOR ---
