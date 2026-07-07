@@ -1,6 +1,6 @@
 import './firebase';
 import { auth, db } from "./firebase"; // <-- Clean import of our working auth and db
-import { signInWithEmailAndPassword, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "firebase/auth";
+import { signInWithEmailAndPassword, signInWithCustomToken, signInAnonymously, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import React, { useState, useMemo, useEffect } from 'react';
 import { 
     Activity, Crosshair, Map, BarChart3, Trash2, Shield, PlusCircle, 
@@ -442,42 +442,78 @@ export default function NetMindApp() {
             </div>
         );
     }
-// FORCE LOGIN: If no user is authenticated, intercept and show the login form
+// FORCE LOGIN: Intercept unauthorized users and show all connected authentication pathways
 if (!user) {
     return (
         <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4 font-sans">
             <div className="bg-white p-8 rounded-xl shadow-md border border-slate-200 max-w-md w-full">
+                {/* App Brand Header */}
                 <div className="flex items-center gap-2 justify-center mb-6">
                     <Shield className="text-blue-600" size={32} />
                     <h1 className="text-2xl font-bold text-slate-800">NetMind <span className="text-blue-600">Pro</span></h1>
                 </div>
                 
-                <h2 className="text-lg font-semibold text-slate-700 text-center mb-4">Sign in to your dashboard</h2>
+                <h2 className="text-lg font-semibold text-slate-700 text-center mb-5">Sign in to your dashboard</h2>
                 
+                {/* OPTION 1: Google Sign-In */}
+                <button 
+                    onClick={async () => {
+                        const errorDiv = document.getElementById('auth-error');
+                        if (errorDiv) errorDiv.innerText = '';
+                        try {
+                            const provider = new GoogleAuthProvider();
+                            await signInWithPopup(auth, provider);
+                        } catch (err) {
+                            console.error(err);
+                            if (errorDiv) errorDiv.innerText = err.message.replace("Firebase: ", "");
+                        }
+                    }} 
+                    className="w-full flex items-center justify-center gap-3 bg-white hover:bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 border border-slate-300 rounded-lg shadow-sm transition-all"
+                >
+                    <svg className="w-5 h-5" viewBox="0 0 24 24">
+                        <path fill="#EA4335" d="M12.24 10.285V14.4h6.887c-.275 1.565-1.88 4.604-6.887 4.604-4.33 0-7.866-3.577-7.866-8s3.536-8 7.866-8c2.46 0 4.105 1.025 5.047 1.926l3.227-3.11C18.281 1.96 15.45 1 12.24 1 6.133 1 1.143 5.923 1.143 12s4.99 11 11.097 11c6.373 0 10.606-4.418 10.606-10.8 0-.727-.078-1.282-.175-1.915H12.24z"/>
+                    </svg>
+                    Continue with Google
+                </button>
+
+                {/* Visual Separator Divider */}
+                <div className="relative my-6">
+                    <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-slate-200"></div>
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-white px-2 text-slate-400 font-medium">Or email sign-in</span>
+                    </div>
+                </div>
+
+                {/* OPTION 2: Email & Password Form */}
                 <form onSubmit={async (e) => {
                     e.preventDefault();
-                    const email = e.target.email.value;
-                    const password = e.target.password.value;
+                    const email = e.currentTarget.email.value;
+                    const password = e.currentTarget.password.value;
                     const errorDiv = document.getElementById('auth-error');
-                    errorDiv.innerText = '';
+                    if (errorDiv) errorDiv.innerText = '';
                     try {
                         await signInWithEmailAndPassword(auth, email, password);
                     } catch (err) {
                         console.error(err);
-                        errorDiv.innerText = err.message.replace("Firebase: ", "");
+                        if (errorDiv) errorDiv.innerText = err.message.replace("Firebase: ", "");
                     }
                 }} className="space-y-4">
                     <div>
                         <label className="block text-sm font-semibold text-slate-600 mb-1">Email Address</label>
-                        <input name="email" type="email" required className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="you@example.com" />
+                        <input name="email" type="email" required className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm" placeholder="you@example.com" />
                     </div>
                     <div>
                         <label className="block text-sm font-semibold text-slate-600 mb-1">Password</label>
-                        <input name="password" type="password" required className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="••••••••" />
+                        <input name="password" type="password" required className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm" placeholder="••••••••" />
                     </div>
-                    <div id="auth-error" className="text-xs text-red-500 font-medium min-h-[1rem]"></div>
-                    <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg transition-colors shadow-sm">
-                        Sign In
+                    
+                    {/* Error Feedback Message Box */}
+                    <div id="auth-error" className="text-xs text-red-500 font-medium min-h-[1.25rem] mt-1"></div>
+                    
+                    <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg transition-colors shadow-sm text-sm">
+                        Sign In with Password
                     </button>
                 </form>
             </div>
