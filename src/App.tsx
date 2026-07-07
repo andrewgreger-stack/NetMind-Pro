@@ -445,18 +445,45 @@ export default function NetMindApp() {
 // FORCE LOGIN: If no user is authenticated, intercept and show the login form
 if (!user) {
     return (
-        <LoginForm auth={auth} /> 
-        // Note: Change "<LoginForm />" to match whatever your actual 
-        // login interface component name is in your code layout!
+        <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4 font-sans">
+            <div className="bg-white p-8 rounded-xl shadow-md border border-slate-200 max-w-md w-full">
+                <div className="flex items-center gap-2 justify-center mb-6">
+                    <Shield className="text-blue-600" size={32} />
+                    <h1 className="text-2xl font-bold text-slate-800">NetMind <span className="text-blue-600">Pro</span></h1>
+                </div>
+                
+                <h2 className="text-lg font-semibold text-slate-700 text-center mb-4">Sign in to your dashboard</h2>
+                
+                <form onSubmit={async (e) => {
+                    e.preventDefault();
+                    const email = e.target.email.value;
+                    const password = e.target.password.value;
+                    const errorDiv = document.getElementById('auth-error');
+                    errorDiv.innerText = '';
+                    try {
+                        await signInWithEmailAndPassword(auth, email, password);
+                    } catch (err) {
+                        console.error(err);
+                        errorDiv.innerText = err.message.replace("Firebase: ", "");
+                    }
+                }} className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-semibold text-slate-600 mb-1">Email Address</label>
+                        <input name="email" type="email" required className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="you@example.com" />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-semibold text-slate-600 mb-1">Password</label>
+                        <input name="password" type="password" required className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="••••••••" />
+                    </div>
+                    <div id="auth-error" className="text-xs text-red-500 font-medium min-h-[1rem]"></div>
+                    <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg transition-colors shadow-sm">
+                        Sign In
+                    </button>
+                </form>
+            </div>
+        </div>
     );
 }
-
-// Otherwise, render the main protected dashboard app down here
-return (
-    <div className="netmind-dashboard">
-        {/* Your seasonal tracking app views */}
-    </div>
-);
     return (
         <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-20 md:pb-8">
             {/* Header */}
